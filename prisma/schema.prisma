@@ -1,0 +1,118 @@
+// ProjectPilot AI — data model
+// Provider is postgresql by default. To run instantly on SQLite for a demo,
+// change provider to "sqlite" and set DATABASE_URL="file:./dev.db" in .env.
+// The schema deliberately avoids native enums and scalar lists so the same
+// file works on both engines unchanged.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String          @id @default(cuid())
+  email     String          @unique
+  name      String
+  createdAt DateTime        @default(now())
+
+  ownedProjects Project[]      @relation("ProjectOwner")
+  memberships   ProjectMember[]
+  assignedTasks Task[]         @relation("TaskAssignee")
+}
+
+model Project {
+  id          String          @id @default(cuid())
+  name        String
+  description String?
+  status      String          @default("active")   // active | on_hold | done | archived
+  priority    String          @default("medium")   // low | medium | high
+  deadline    DateTime?
+  createdAt   DateTime        @default(now())
+
+  ownerId String
+  owner   User   @relation("ProjectOwner", fields: [ownerId], references: [id])
+
+  tasks     Task[]
+  members   ProjectMember[]
+  aiActions AiAction[]
+  risk      RiskSnapshot?
+}
+
+model ProjectMember {
+  id        String  @id @default(cuid())
+  role      String  @default("member")            // owner | member
+  projectId String
+  userId    String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User    @relation(fields: [userId], references: [id])
+
+  @@unique([projectId, userId])
+}
+
+model Task {
+  id        String    @id @default(cuid())
+  title     String
+  detail    String?
+  status    String    @default("todo")            // todo | in_progress | review | done
+  priority  String    @default("medium")          // low | medium | high
+  order     Int       @default(0)                 // sort order within a column
+  dueDate   DateTime?
+  createdAt DateTime  @default(now())
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  assigneeId String?
+  assignee   User?   @relation("TaskAssignee", fields: [assigneeId], references: [id])
+
+  // Self-relation: a task can be blocked by another task
+  blockedById String?
+  blockedBy   Task?   @relation("TaskBlock", fields: [blockedById], references: [id])
+  blocking    Task[]  @relation("TaskBlock")
+
+  comments Comment[]
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  body      String
+  authorId  String
+  taskId    String
+  createdAt DateTime @default(now())
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+// Every mutation the AI makes is logged here. Powers two features at once:
+//  - explainability: `reasoning` is shown to the user next to each change
+//  - undo: reverting a whole batchId restores the `before` snapshots atomically
+model AiAction {
+  id        String   @id @default(cuid())
+  batchId   String                                   // one replan = one batch
+  type      String                                   // create_task | update_task | move_task | flag_risk
+  targetId  String?                                  // task id affected (null for creates until known)
+  before    Json?                                    // prior state, for undo
+  after     Json?                                    // new state
+  reasoning String                                   // why the AI made this change
+  reverted  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, batchId])
+}
+
+// Deterministic (non-LLM) project health, recomputed on demand.
+model RiskSnapshot {
+  id         String   @id @default(cuid())
+  projectId  String   @unique
+  score      Int                                     // 0 (healthy) .. 100 (critical)
+  level      String                                  // low | medium | high
+  factors    Json                                    // [{ label, weight }]
+  computedAt DateTime @default(now())
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
