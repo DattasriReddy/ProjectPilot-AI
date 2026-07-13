@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { requireUser } from "@/lib/auth";
 import { ok, bad, handle } from "@/lib/http";
 import { computeRisk } from "@/lib/ai/risk";
