@@ -1,3 +1,5 @@
+import DashboardHeader from "@/components/dashboard/DashboardHeader";
+import Navbar from "@/components/Navbar";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -74,29 +76,14 @@ export default async function Dashboard() {
   ];
 
   return (
-    <main className="mx-auto max-w-7xl px-8 py-10">
+    <>
+      <Navbar />
+
+      <main className="mx-auto max-w-7xl px-8 py-10">
 
       {/* Header */}
 
-      <section className="mb-12">
-
-        <p className="text-sm uppercase tracking-[0.3em] text-cyan-400">
-          ProjectPilot
-        </p>
-
-        <h1 className="mt-3 text-5xl font-bold text-white">
-          Welcome back,{" "}
-          <span className="bg-gradient-to-r from-cyan-400 via-sky-400 to-blue-500 bg-clip-text text-transparent">
-            {user.name}
-          </span>
-        </h1>
-
-        <p className="mt-4 max-w-2xl text-lg text-slate-400">
-          Here's the current state of your projects. Stay ahead of deadlines,
-          blockers and risks with AI-assisted planning.
-        </p>
-
-      </section>
+      <DashboardHeader />
 
       {/* Stats */}
 
@@ -240,5 +227,6 @@ export default async function Dashboard() {
       </section>
 
     </main>
+  </>
   );
 }

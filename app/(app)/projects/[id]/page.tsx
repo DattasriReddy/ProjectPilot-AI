@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { computeRisk } from "@/lib/ai/risk";
 import { ProjectWorkspace } from "@/components/ProjectWorkspace";
 import type { ProjectFull } from "@/lib/types";
+import Navbar from "@/components/Navbar";
 
 export const dynamic = "force-dynamic";
 
@@ -44,5 +45,10 @@ export default async function ProjectPage({ params }: { params: { id: string } }
     })),
   };
 
-  return <ProjectWorkspace project={project} />;
+  return (
+    <>
+    <Navbar />
+    <ProjectWorkspace project={project} />
+  </>
+  );
 }
