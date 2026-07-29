@@ -20,6 +20,15 @@ export default async function ProjectPage({ params }: { params: { id: string } }
       risk: true,
     },
   });
+  const members = await prisma.user.findMany({
+  select: {
+    id: true,
+    name: true,
+  },
+  orderBy: {
+    name: "asc",
+  },
+});
 
   // Serialise to plain JSON-safe shapes for the client component.
   const project: ProjectFull = {
@@ -50,7 +59,7 @@ export default async function ProjectPage({ params }: { params: { id: string } }
     <Navbar />
     <ProjectWorkspace 
       project={project}
-      members={[]}/>
+      members={members}/>
   </>
   );
 }
