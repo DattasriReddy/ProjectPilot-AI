@@ -39,8 +39,21 @@ export default async function CalendarPage() {
   events.sort((a, b) => a.date.getTime() - b.date.getTime());
 
   const now = new Date();
-  const overdue  = events.filter((e) => e.date < now);
-  const upcoming = events.filter((e) => e.date >= now);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const overdue = events.filter((e) => {
+    const d = new Date(e.date);
+    d.setHours(0, 0, 0, 0);
+    return d < today;
+});
+
+  const upcoming = events.filter((e) => {
+    const d = new Date(e.date);
+    d.setHours(0, 0, 0, 0);
+    return d >= today;
+});
 
   // Build a 5-week grid for the current month
   const year  = now.getFullYear();
@@ -90,7 +103,10 @@ export default async function CalendarPage() {
                 if (!date) return <div key={i} />;
                 const dayEvents = eventsByDate(date);
                 const isToday   = date.toDateString() === now.toDateString();
-                const isPast    = date < now && !isToday;
+                const cellDate = new Date(date);
+                cellDate.setHours(0, 0, 0, 0);
+
+                const isPast = cellDate < today;
                 return (
                   <div
                     key={i}
