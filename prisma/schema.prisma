@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id            String          @id @default(cuid())
+  email         String          @unique
+  name          String
+  createdAt     DateTime        @default(now())
+  ownedProjects Project[]       @relation("ProjectOwner")
+  memberships   ProjectMember[]
+  assignedTasks Task[]          @relation("TaskAssignee")
+}
+
+model Project {
+  id          String          @id @default(cuid())
+  name        String
+  description String?
+  status      String          @default("active")
+  priority    String          @default("medium")
+  deadline    DateTime?
+  createdAt   DateTime        @default(now())
+  ownerId     String
+  aiActions   AiAction[]
+  owner       User            @relation("ProjectOwner", fields: [ownerId], references: [id])
+  members     ProjectMember[]
+  risk        RiskSnapshot?
+  tasks       Task[]
+}
+
+model ProjectMember {
+  id        String  @id @default(cuid())
+  role      String  @default("member")
+  projectId String
+  userId    String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User    @relation(fields: [userId], references: [id])
+
+  @@unique([projectId, userId])
+}
+
+model Task {
+  id          String    @id @default(cuid())
+  title       String
+  detail      String?
+  status      String    @default("todo")
+  priority    String    @default("medium")
+  order       Int       @default(0)
+  dueDate     DateTime?
+  createdAt   DateTime  @default(now())
+  projectId   String
+  assigneeId  String?
+  blockedById String?
+  comments    Comment[]
+  assignee    User?     @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  blockedBy   Task?     @relation("TaskBlock", fields: [blockedById], references: [id])
+  blocking    Task[]    @relation("TaskBlock")
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  body      String
+  authorId  String
+  taskId    String
+  createdAt DateTime @default(now())
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model AiAction {
+  id        String   @id @default(cuid())
+  batchId   String
+  type      String
+  targetId  String?
+  before    Json?
+  after     Json?
+  reasoning String
+  reverted  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, batchId])
+}
+
+model RiskSnapshot {
+  id         String   @id @default(cuid())
+  projectId  String   @unique
+  score      Int
+  level      String
+  factors    Json
+  computedAt DateTime @default(now())
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
